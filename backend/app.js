@@ -3,14 +3,9 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const session = require("express-session");
+const cookieParser = require("cookie-parser");
 const mongoose = require("mongoose");
 const dns = require("dns");
-
-
-const connectMongo = require("connect-mongo");
-const MongoStore =
-  connectMongo.MongoStore || connectMongo.default || connectMongo;
 
 
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
@@ -46,30 +41,21 @@ app.use(
   })
 );
 
-
 app.use(express.json({ limit: "1mb" }));
+app.use(cookieParser());
 
-
-app.use(
-  session({
-    name: "rizz_session",
-    secret: process.env.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGO_URI,
-      collectionName: "sessions",
-    }),
-
-    cookie: {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: isProd ? "none" : "lax",
-      maxAge: 8 * 60 * 60 * 1000,
-    },
-  })
-);
+app.use((req, res, next) => {
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const origin = req.get("origin");
+    if (!origin || !allowedOrigins.includes(origin.replace(/\/$/, ""))) {
+      return res.status(403).json({
+        success: false,
+        message: "Request origin is not allowed",
+      });
+    }
+  }
+  next();
+});
 
 
 app.use("/api", loginRoutes);
@@ -109,13 +95,13 @@ async function startServer() {
       throw new Error("MONGO_URI is missing from .env");
     }
 
-    if (!process.env.SESSION_SECRET) {
-      throw new Error("SESSION_SECRET is missing from .env");
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is missing from .env");
     }
 
-    if (process.env.SESSION_SECRET.length < 32) {
+    if (process.env.JWT_SECRET.length < 32) {
       throw new Error(
-        "SESSION_SECRET must be at least 32 characters long"
+        "JWT_SECRET must be at least 32 characters long"
       );
     }
 

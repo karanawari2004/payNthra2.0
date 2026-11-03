@@ -1,7 +1,17 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
+const authenticateToken = require("../middleware/authenticateToken");
 
 const router = express.Router();
 
+const isProd = process.env.NODE_ENV === "production";
+const authCookieOptions = {
+  httpOnly: true,
+  secure: isProd,
+  sameSite: isProd ? "none" : "lax",
+  path: "/",
+  maxAge: 8 * 60 * 60 * 1000,
+};
 
 router.post("/login", (req, res) => {
   const { username, password } = req.body || {};
@@ -17,21 +27,17 @@ router.post("/login", (req, res) => {
     username === process.env.ADMIN_USERNAME &&
     password === process.env.ADMIN_PASSWORD
   ) {
-    req.session.user = { username, role: "admin" };
+    const user = { username, role: "admin" };
+    const token = jwt.sign(user, process.env.JWT_SECRET, {
+      algorithm: "HS256",
+      expiresIn: "8h",
+    });
 
-    
-    return req.session.save((err) => {
-      if (err) {
-        return res.status(500).json({
-          success: false,
-          message: "Could not save session",
-        });
-      }
-      res.json({
-        success: true,
-        message: "Login successful",
-        user: req.session.user,
-      });
+    res.cookie("access_token", token, authCookieOptions);
+    return res.json({
+      success: true,
+      message: "Login successful",
+      user,
     });
   }
 
@@ -42,22 +48,19 @@ router.post("/login", (req, res) => {
 });
 
 
-router.get("/session", (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ success: false, message: "Please log in" });
-  }
-  res.json({ success: true, user: req.session.user });
+router.get("/session", authenticateToken, (req, res) => {
+  res.json({ success: true, user: req.user });
 });
 
 
 router.post("/logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ success: false, message: "Logout failed" });
-    }
-    res.clearCookie("rizz_session");
-    return res.json({ success: true, message: "Logged out successfully" });
+  res.clearCookie("access_token", {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: "/",
   });
+  return res.json({ success: true, message: "Logged out successfully" });
 });
 
 module.exports = router;

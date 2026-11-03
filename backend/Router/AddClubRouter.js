@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const authenticateToken = require("../middleware/authenticateToken");
 
 const {
   createClub,
@@ -7,6 +8,8 @@ const {
   deleteClub,
   updateClub,
 } = require("../controllers/AddClubController");
+
+router.use(authenticateToken);
 
 router.post("/", createClub);
 router.get("/", getAllClubs);
