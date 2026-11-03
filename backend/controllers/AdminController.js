@@ -96,12 +96,12 @@ function calculateReport(data) {
   );
 
 
-const licenceFeeRateValue =
-  licenceFeeRate < 1 ? licenceFeeRate : licenceFeeRate / 100;
+  const licenceFeeRateValue =
+    licenceFeeRate < 1 ? licenceFeeRate : licenceFeeRate / 100;
 
-const licenceFee = roundMoney(
-  topups * licenceFeeRateValue
-);
+  const licenceFee = roundMoney(
+    topups * licenceFeeRateValue
+  );
 
   const paymentsTotal = roundMoney(
     card + upi + updateAmount
